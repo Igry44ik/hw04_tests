@@ -4,14 +4,14 @@ from django.test import Client, TestCase
 
 from django.urls import reverse
 
-from posts.forms import PostCreateForm
+from posts.forms import PostForm
 
 from ..models import Group, Post
 
 User = get_user_model()
 
 
-class PostCreateFormTests(TestCase):
+class PostFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -27,7 +27,7 @@ class PostCreateFormTests(TestCase):
         cls.group = Group.objects.create(
             title="Тестовая группа"
         )
-        cls.form = PostCreateForm()
+        cls.form = PostForm()
 
         cls.guest_client = Client()
         cls.authorized_client = Client()
