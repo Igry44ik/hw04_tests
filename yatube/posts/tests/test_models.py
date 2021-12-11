@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 
-from ..models import Post, Group
+from ..models import Group, Post
 
 User = get_user_model()
 

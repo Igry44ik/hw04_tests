@@ -1,13 +1,12 @@
+from django import forms
+
 from django.contrib.auth import get_user_model
 
 from django.test import Client, TestCase
 
 from django.urls import reverse
 
-from django import forms
-
 from posts.models import Group, Post
-
 
 User = get_user_model()
 
@@ -106,6 +105,7 @@ class PostPagesTests(TestCase):
                 self.assertIsInstance(form_field, expected)
 
     def test_post_in_main_page(self):
+        """Новый пост отображается на главной странице"""
         url = ((reverse("posts:index")),
                reverse("posts:slug", args={"slug": "test-slug"}))
         with self.subTest():
