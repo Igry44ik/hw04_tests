@@ -1,37 +1,17 @@
 from django.contrib.auth import get_user_model
 
-from django.test import TestCase, Client
+from django.test import Client, TestCase
 
 from django.urls import reverse
 
-from posts.models import Post, Group
-
+from posts.models import Group, Post
 
 User = get_user_model()
 
+USERNAME = "Test"
+
 
 class StaticURLTests(TestCase):
-    def setUp(self):
-        self.guest_client = Client()
-
-    def test_homepage(self):
-        response = self.guest_client.get("/")
-        self.assertEqual(response.status_code, 200)
-
-    def test_about(self):
-        response = self.guest_client.get("/about/author/")
-        self.assertEqual(response.status_code, 200)
-
-    def test_tech(self):
-        response = self.guest_client.get("/about/tech/")
-        self.assertEqual(response.status_code, 200)
-
-
-USERNAME = "Test"
-TESTSLUG = "Test-slug"
-
-
-class PostURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -46,55 +26,45 @@ class PostURLTests(TestCase):
             author=cls.user,
             group=cls.group
         )
-        cls.guest_client = Client()
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
 
-    def test_home_url_exists_at_desired_location(self):
-        """Страница / доступна любому пользователю."""
-        response = self.guest_client.get("/")
-        self.assertEqual(response.status_code, 200)
+    def test_page_for_guest_client(self):
+        page_url = {
+            "/": 200,
+            "/about/author/": 200,
+            "/about/tech/": 200,
+            "/group/test-slug/": 200,
+            reverse("posts:post_detail", args=[self.post.id]): 200,
+            reverse("posts:profile", args=[USERNAME]): 200,
+            reverse("posts:post_detail", args=[self.post.id]): 200,
+        }
+        for url, status_code in page_url.items():
+            with self.subTest(url=url, status_code=status_code):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
 
-    def test_group_url_exists_at_desired_location_authorized(self):
-        """Страница /group/<slug>/ доступна любому пользователю."""
-        response = self.guest_client.get("/group/test-slug/")
-        self.assertEqual(response.status_code, 200)
-
-    def test_username_url_exists_at_desired_location(self):
-        """Страница /posts/profile/ доступна любому пользователю."""
-        response = self.guest_client.get(reverse("posts:profile",
-                                                 args=[USERNAME]))
-        self.assertEqual(response.status_code, 200)
-
-    def test_post_id_url_exists_at_desired_location(self):
-        """Страница /posts/post_detail/ доступна любому пользователю."""
-        response = self.guest_client.get(reverse("posts:post_detail",
-                                                 args=[self.post.id]))
-        self.assertEqual(response.status_code, 200)
-
-    def test_post_edit_url_exists_at_desired_location_authorized(self):
-        """Страница /posts/<post_id>/edit/ доступна только автору поста"""
-        response = self.authorized_client.get(reverse("posts:post_edit",
-                                                      args=[self.post.id]))
-        self.assertEqual(response.status_code, 200)
-
-    def test_post_create_url_exists_at_desired_location_authorized(self):
-        """Страница /posts/create/ доступна только авторизированному
-        пользователю
-        """
-        response = self.authorized_client.get("/create/")
-        self.assertEqual(response.status_code, 200)
+    def test__page_for_authorized_client(self):
+        page_url = {
+            "/create/": 200,
+            reverse("posts:post_edit", args=[self.post.id]): 200,
+        }
+        for url, status_code in page_url.items():
+            with self.subTest(url=url, status_code=status_code):
+                response = self.authorized_client.get(url)
+                self.assertEqual(response.status_code, 200)
 
     def test_unexisting_page(self):
         """Несуществующая страница"""
-        response = self.guest_client.get("/unexisting_page/")
+        response = self.client.get("/unexisting_page/")
         self.assertEqual(response.status_code, 404)
 
     def test_urls_uses_correct_template(self):
         templates_url_names = {
             "posts/index.html": "/",
             "posts/create_post.html": "/create/",
-            "posts/group_list.html": "/group/test-slug/",
+            "posts/group_list.html": reverse("posts:slug",
+                                             args=[self.group.slug]),
             "posts/profile.html": reverse("posts:profile", args=[USERNAME]),
             "posts/post_detail.html": reverse("posts:post_detail",
                                               args=[self.post.id]),

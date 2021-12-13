@@ -1,5 +1,7 @@
 from django import forms
 
+from django.conf import settings
+
 from django.contrib.auth import get_user_model
 
 from django.test import Client, TestCase
@@ -34,7 +36,7 @@ class PostPagesTests(TestCase):
         template_pages_names = {
             "posts/index.html": reverse("posts:index"),
             "posts/group_list.html": reverse("posts:slug",
-                                             args={"slug": "test-slug"}),
+                                             args={"slug": self.group.slug}),
             "posts/profile.html": reverse("posts:profile"),
             "posts/post_detail.html": reverse("posts:post_detail",
                                               args=[self.post.id]),
@@ -45,34 +47,24 @@ class PostPagesTests(TestCase):
                 response = self.authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
-    def test_home_page_show_correct_context(self):
-        response = self.authorized_client.get(reverse("posts:index"))
-        first_object = response.context.get("page_obj")[0]
-        post_text_0 = first_object.text
-        post_group_0 = first_object.group.title
-        post_author = first_object.author.username
-        self.assertEqual(post_text_0, "Тестовый текст")
-        self.assertEqual(post_group_0, "test-group")
-        self.assertEqual(post_author, USERNAME)
-
-    def test_group_list_correct_context(self):
-        response = self.authorized_client.get(
-            reverse('posts:slug', kwargs={'slug': 'test-slug'},)
-        )
-        first_object = response.context['page_obj'][0]
-        self.assertEqual(first_object.group.title, 'test-group')
-        self.assertEqual(first_object.group.slug, 'test-slug')
-
-    def test_profile_correct_context(self):
-        response = self.authorized_client.get(reverse("posts:profile",
-                                                      args=[USERNAME]))
-        first_object = response.context.get("page_obj")[0]
-        post_author = first_object.author.username
-        post_text_0 = first_object.text
-        post_group_0 = first_object.group.title
-        self.assertEqual(post_author, USERNAME)
-        self.assertEqual(post_text_0, "Тестовый текст")
-        self.assertEqual(post_group_0, "test-group")
+    def test_pages_correct_context(self):
+        templates_pages_names = {
+            reverse("posts:index"),
+            reverse("posts:slug", kwargs={"slug": self.group.slug}),
+            reverse("posts:profile", kwargs={"username": self.user.username}),
+        }
+        for reverse_name in templates_pages_names:
+            with self.subTest(reverse_name=reverse_name):
+                response = self.authorized_client.get(reverse_name)
+                first_object = response.context.get("page_obj")[0]
+                post_author_0 = first_object.author
+                post_id_0 = first_object.id
+                post_text_0 = first_object.text
+                post_group_0 = first_object.group.slug
+                self.assertEqual(post_text_0, self.post.text)
+                self.assertEqual(post_id_0, self.post.id)
+                self.assertEqual(post_author_0, self.post.author)
+                self.assertEqual(post_group_0, self.group.slug)
 
     def test_post_detail_correct_context(self):
         response = self.authorized_client.get(reverse("posts:post_detail",
@@ -115,7 +107,7 @@ class PostPagesTests(TestCase):
             и на странице группы.
         """
         url = ((reverse("posts:index")),
-               reverse("posts:slug", kwargs={"slug": "test-slug"}),)
+               reverse("posts:slug", kwargs={"slug": self.group.slug}),)
         for urls in url:
             with self.subTest(url=url):
                 response = self.authorized_client.get(urls)
@@ -128,6 +120,22 @@ class PostPagesTests(TestCase):
 
     def test_post_not_in_your_group(self):
         """Новый пост попал не в свою группу."""
-        url = reverse("posts:slug", args={"slug": "test-slug"},)
+        url = reverse("posts:slug", kwargs={"slug": self.group.slug},)
         response = self.authorized_client.get(url)
         self.assertNotEqual(response.context.get("page_obj"), self.post)
+
+    def test_paginator(self):
+        for post in range(settings.QUANTITY_POSTS):
+            Post.objects.create(
+                text="Тестовый текст",
+                author=self.user,
+                group=self.group
+            )
+        url = reverse("posts:index"),
+        reverse("posts:slug", kwargs={"slug": self.group.slug}),
+        reverse("posts:profile", args=[USERNAME])
+        for urls in url:
+            with self.subTest(urls=urls):
+                response = self.authorized_client.get(urls)
+                self.assertEqual(len(response.context["page_obj"]),
+                                 settings.QUANTITY_POSTS)

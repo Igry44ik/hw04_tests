@@ -29,8 +29,6 @@ class PostFormTests(TestCase):
             text="Тестовый текст"
         )
         cls.form = PostForm()
-
-        cls.guest_client = Client()
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
 
@@ -48,26 +46,63 @@ class PostFormTests(TestCase):
         self.assertRedirects(response, reverse('posts:profile',
                                                args=[USERNAME]))
         self.assertEqual(Post.objects.count(), posts_count + 1)
+        self.assertTrue(
+            Post.objects.filter(
+                text="Тестовый текст",
+                group=self.group.id
+            )
+        )
 
     def test_post_edit(self):
-        test_post = Post.objects.create(
-            text="Тестовый текст",
-            author=self.user,
-        )
         form_data = {
             "text": "Новый пост",
             "group": self.group.pk,
         }
         posts_count = Post.objects.count()
         response = self.authorized_client.post(
-            reverse("posts:post_edit", kwargs={"post_id": test_post.pk}),
+            reverse("posts:post_edit", kwargs={"post_id": self.post.pk}),
+            data=form_data,
+            follow=True
+        )
+        post_response = response.context["post"]
+        self.assertEqual(Post.objects.count(), posts_count)
+        self.assertEqual(post_response.text, form_data["text"])
+        self.assertEqual(post_response.author, self.user)
+        self.assertEqual(post_response.group, self.group)
+        self.assertRedirects(response,
+                             reverse("posts:post_detail",
+                                     kwargs={"post_id": self.post.pk}))
+        self.assertTrue(Post.objects.filter(
+            text='Новый пост',
+            group__slug="test-slug").exists())
+
+    def test_anonumous_create_post(self):
+        posts_count = Post.objects.count()
+        form_data = {
+            "text": "Тестовый текст",
+            "group": self.group.id,
+        }
+        response = self.client.post(
+            reverse("posts:post_create"),
             data=form_data,
             follow=True
         )
         self.assertEqual(Post.objects.count(), posts_count)
-        self.assertRedirects(response,
-                             reverse("posts:post_detail",
-                                     kwargs={"post_id": test_post.pk}))
-        self.assertTrue(Post.objects.filter(
-            text='Новый пост',
-            group__slug="test-slug").exists())
+        self.assertRedirects(response, (reverse("users:login") + "?next="
+                                        + reverse("posts:post_create")))
+
+    def test_anonumous_edit_post(self):
+        posts_count = Post.objects.count()
+        form_data = {
+            "text": "Тестовый текст",
+            "group": self.group.id,
+        }
+        response = self.client.post(
+            reverse("posts:post_edit", kwargs={"post_id": self.post.pk}),
+            data=form_data,
+            follow=True
+        )
+        self.assertEqual(Post.objects.count(), posts_count)
+        self.assertRedirects(response, (reverse("users:login")) + "?next="
+                             + (reverse("posts:post_edit",
+                                        kwargs={"post_id": self.post.pk})))
