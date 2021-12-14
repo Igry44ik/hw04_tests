@@ -1,7 +1,5 @@
 from django.contrib.auth import get_user_model
-
 from django.test import Client, TestCase
-
 from django.urls import reverse
 
 from posts.forms import PostForm
@@ -46,12 +44,9 @@ class PostFormTests(TestCase):
         self.assertRedirects(response, reverse('posts:profile',
                                                args=[USERNAME]))
         self.assertEqual(Post.objects.count(), posts_count + 1)
-        self.assertTrue(
-            Post.objects.filter(
-                text="Тестовый текст",
-                group=self.group.id
-            )
-        )
+        last_post = Post.objects.latest("id")
+        self.assertEqual(last_post.text, self.post.text)
+        self.assertEqual(last_post.group.id, form_data["group"])
 
     def test_post_edit(self):
         form_data = {
@@ -68,15 +63,12 @@ class PostFormTests(TestCase):
         self.assertEqual(Post.objects.count(), posts_count)
         self.assertEqual(post_response.text, form_data["text"])
         self.assertEqual(post_response.author, self.user)
-        self.assertEqual(post_response.group, self.group)
+        self.assertEqual(post_response.group.pk, form_data["group"])
         self.assertRedirects(response,
                              reverse("posts:post_detail",
                                      kwargs={"post_id": self.post.pk}))
-        self.assertTrue(Post.objects.filter(
-            text='Новый пост',
-            group__slug="test-slug").exists())
 
-    def test_anonumous_create_post(self):
+    def test_anonymous_create_post(self):
         posts_count = Post.objects.count()
         form_data = {
             "text": "Тестовый текст",
@@ -91,7 +83,7 @@ class PostFormTests(TestCase):
         self.assertRedirects(response, (reverse("users:login") + "?next="
                                         + reverse("posts:post_create")))
 
-    def test_anonumous_edit_post(self):
+    def test_anonymous_edit_post(self):
         posts_count = Post.objects.count()
         form_data = {
             "text": "Тестовый текст",
@@ -106,3 +98,10 @@ class PostFormTests(TestCase):
         self.assertRedirects(response, (reverse("users:login")) + "?next="
                              + (reverse("posts:post_edit",
                                         kwargs={"post_id": self.post.pk})))
+        self.assertEqual(
+            Post.objects.filter(
+                text=form_data["text"],
+                author=self.user,
+                group=self.group
+            ).exists()
+        )

@@ -1,7 +1,5 @@
 from django.contrib.auth import get_user_model
-
 from django.test import Client, TestCase
-
 from django.urls import reverse
 
 from posts.models import Group, Post
@@ -34,7 +32,7 @@ class StaticURLTests(TestCase):
             "/": 200,
             "/about/author/": 200,
             "/about/tech/": 200,
-            "/group/test-slug/": 200,
+            "/group/slug/": 200,
             reverse("posts:post_detail", args=[self.post.id]): 200,
             reverse("posts:profile", args=[USERNAME]): 200,
             reverse("posts:post_detail", args=[self.post.id]): 200,
