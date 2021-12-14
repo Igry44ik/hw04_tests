@@ -48,20 +48,32 @@ class PostPagesTests(TestCase):
             reverse("posts:index"),
             reverse("posts:slug", kwargs={"slug": self.group.slug}),
             reverse("posts:profile", kwargs={"username": self.user.username}),
-            reverse("posts:post_detail", args=[self.post.id]),
         }
         for reverse_name in templates_pages_names:
             with self.subTest(reverse_name=reverse_name):
                 response = self.authorized_client.get(reverse_name)
                 first_object = response.context.get("page_obj")[0]
                 post_author_0 = first_object.author
-                post_id_0 = first_object.id
+                post_id_0 = first_object.pk
                 post_text_0 = first_object.text
                 post_group_0 = first_object.group.slug
                 self.assertEqual(post_text_0, self.post.text)
-                self.assertEqual(post_id_0, self.post.id)
+                self.assertEqual(post_id_0, self.post.pk)
                 self.assertEqual(post_author_0, self.post.author)
                 self.assertEqual(post_group_0, self.group.slug)
+
+    def test_post_detail_correct_context(self):
+        response = self.authorized_client.get(reverse("posts:post_detail",
+                                                      args=[self.post.id]))
+        first_object = response.context.get("post")
+        post_author_0 = first_object.author
+        post_id_0 = first_object.id
+        post_text_0 = first_object.text
+        post_group_0 = first_object.group.slug
+        self.assertEqual(post_author_0, self.post.author)
+        self.assertEqual(post_id_0, self.post.id)
+        self.assertEqual(post_text_0, self.post.text)
+        self.assertEqual(post_group_0, self.group.slug)
 
     def test_post_edit_correct_context(self):
         response = self.authorized_client.get(reverse("posts:post_edit",
@@ -109,7 +121,7 @@ class PostPagesTests(TestCase):
         self.assertNotEqual(response.context.get("page_obj"), self.post)
 
     def test_paginator(self):
-        for self.post in range(settings.QUANTITY_POSTS):
+        for post in range(settings.QUANTITY_POSTS):
             url = [
                 reverse("posts:index"),
                 reverse("posts:slug", kwargs={"slug": self.group.slug}),
@@ -120,3 +132,22 @@ class PostPagesTests(TestCase):
                     response = self.authorized_client.get(urls)
                     self.assertEqual(len(response.context["page_obj"]),
                                      settings.QUANTITY_POSTS)
+
+    def test_paginator(self):
+        for self.post in range(settings.QUANTITY_POSTS):
+            Post.objects.create(
+                author=self.user,
+                group=self.group,
+                text='text'
+            )
+        urls = [
+            reverse("posts:index"),
+            reverse("posts:slug", kwargs={"slug": self.group.slug}),
+            reverse("posts:profile", args=[USERNAME])
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+                self.assertEqual(
+                    len(response.context["page_obj"]),
+                    settings.QUANTITY_POSTS)

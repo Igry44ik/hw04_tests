@@ -32,7 +32,7 @@ class StaticURLTests(TestCase):
             "/": 200,
             "/about/author/": 200,
             "/about/tech/": 200,
-            "/group/slug/": 200,
+            reverse("posts:slug", kwargs={"slug": self.group.slug}): 200,
             reverse("posts:post_detail", args=[self.post.id]): 200,
             reverse("posts:profile", args=[USERNAME]): 200,
             reverse("posts:post_detail", args=[self.post.id]): 200,

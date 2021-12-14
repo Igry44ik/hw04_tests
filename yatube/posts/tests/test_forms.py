@@ -98,7 +98,7 @@ class PostFormTests(TestCase):
         self.assertRedirects(response, (reverse("users:login")) + "?next="
                              + (reverse("posts:post_edit",
                                         kwargs={"post_id": self.post.pk})))
-        self.assertEqual(
+        self.assertTrue(
             Post.objects.filter(
                 text=form_data["text"],
                 author=self.user,
