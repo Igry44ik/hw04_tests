@@ -3,7 +3,6 @@ from django.test import Client, TestCase
 from django.urls import reverse
 
 from posts.forms import PostForm
-
 from ..models import Group, Post
 
 User = get_user_model()
@@ -45,7 +44,7 @@ class PostFormTests(TestCase):
                                                args=[USERNAME]))
         self.assertEqual(Post.objects.count(), posts_count + 1)
         last_post = Post.objects.latest("id")
-        self.assertEqual(last_post.text, self.post.text)
+        self.assertEqual(last_post.text, form_data["text"])
         self.assertEqual(last_post.group.id, form_data["group"])
 
     def test_post_edit(self):
@@ -98,10 +97,12 @@ class PostFormTests(TestCase):
         self.assertRedirects(response, (reverse("users:login")) + "?next="
                              + (reverse("posts:post_edit",
                                         kwargs={"post_id": self.post.pk})))
-        self.assertTrue(
-            Post.objects.filter(
-                text=form_data["text"],
-                author=self.user,
-                group=self.group
-            ).exists()
-        )
+        Post.objects.filter(
+            text=form_data["text"],
+            author=self.user,
+            group=self.group,
+            id=self.post.id
+        ).exists()
+        self.assertEqual(self.post.text, form_data["text"])
+        self.assertEqual(self.post.author, self.user)
+        self.assertEqual(self.post.group.id, form_data["group"])

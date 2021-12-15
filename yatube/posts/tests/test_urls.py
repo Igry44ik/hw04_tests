@@ -32,10 +32,9 @@ class StaticURLTests(TestCase):
             "/": 200,
             "/about/author/": 200,
             "/about/tech/": 200,
-            reverse("posts:slug", kwargs={"slug": self.group.slug}): 200,
-            reverse("posts:post_detail", args=[self.post.id]): 200,
-            reverse("posts:profile", args=[USERNAME]): 200,
-            reverse("posts:post_detail", args=[self.post.id]): 200,
+            f"/group/{self.group.slug}/": 200,
+            f"/posts/{self.post.id}/": 200,
+            f"/profile/{USERNAME}/": 200,
         }
         for url, status_code in page_url.items():
             with self.subTest(url=url, status_code=status_code):
