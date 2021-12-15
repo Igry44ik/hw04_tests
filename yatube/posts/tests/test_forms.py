@@ -85,8 +85,8 @@ class PostFormTests(TestCase):
     def test_anonymous_edit_post(self):
         posts_count = Post.objects.count()
         form_data = {
-            "text": "Тестовый текст",
-            "group": self.group.id,
+            "text": "Тест",
+            "group": "other",
         }
         response = self.client.post(
             reverse("posts:post_edit", kwargs={"post_id": self.post.pk}),
